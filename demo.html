@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyPulse - Weather Forecasting Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            /* Light/Sunset/Default variables */
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.5);
+            --sunny-color: #f59e0b;
+            --rainy-color: #38bdf8;
+            --stormy-color: #7c3aed;
+            --success-color: #10b981;
+
+            --transition-speed: 0.5s;
+        }
+
+        /* Adaptive Weather Themes */
+        body.theme-sunny {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1c1917 60%, #451a03 100%);
+            --accent-color: #f59e0b;
+            --accent-glow: rgba(245, 158, 11, 0.4);
+        }
+
+        body.theme-rainy {
+            --bg-gradient: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #0c4a6e 100%);
+            --accent-color: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.4);
+        }
+
+        body.theme-stormy {
+            --bg-gradient: linear-gradient(135deg, #090514 0%, #0f172a 60%, #2e1065 100%);
+            --accent-color: #a855f7;
+            --accent-glow: rgba(168, 85, 247, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+            transition: background var(--transition-speed) ease;
+        }
+
+        /* Ambient Glow Blobs */
+        .glow-blob {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: var(--accent-glow);
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.6;
+            transition: background var(--transition-speed) ease, left 1s ease, top 1s ease;
+        }
+
+        .blob-1 {
+            top: 10%;
+            left: 10%;
+            animation: float 20s infinite alternate;
+        }
+
+        .blob-2 {
+            bottom: 10%;
+            right: 10%;
+            animation: float 25s infinite alternate-reverse;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            50% {
+                transform: translate(30px, -50px) scale(1.1);
+            }
+
+            100% {
+                transform: translate(-20px, 20px) scale(0.9);
+            }
+        }
+
+        /* Container */
+        .app-container {
+            width: 100%;
+            max-width: 1000px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 2rem;
+            z-index: 10;
+        }
+
+        @media (max-width: 868px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Glass Card Base */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        /* Header Details */
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Form Controls */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        @media (max-width: 480px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group.full-width {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 480px) {
+            .input-group.full-width {
+                grid-column: span 1;
+            }
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        label svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--accent-color);
+            fill: none;
+            transition: stroke var(--transition-speed) ease;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input,
+        .input-wrapper select {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            padding-right: 2.5rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .input-wrapper input:focus,
+        .input-wrapper select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .input-wrapper .unit {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            pointer-events: none;
+        }
+
+        /* Dropdown custom style */
+        .input-wrapper select {
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .input-wrapper::after {
+            content: '▼';
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .input-wrapper.numeric-input::after {
+            content: none;
+        }
+
+        /* Predict Button */
+        .btn-predict {
+            grid-column: span 2;
+            margin-top: 1.5rem;
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent-color) 0%, rgba(99, 102, 241, 0.8) 100%);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, background var(--transition-speed) ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 480px) {
+            .btn-predict {
+                grid-column: span 1;
+            }
+        }
+
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+            filter: brightness(1.1);
+        }
+
+        .btn-predict:active {
+            transform: translateY(0);
+        }
+
+        /* Results Card */
+        .results-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 400px;
+        }
+
+        /* Placeholder State */
+        .result-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .result-placeholder svg {
+            width: 80px;
+            height: 80px;
+            stroke: var(--text-secondary);
+            stroke-width: 1.25;
+            fill: none;
+            opacity: 0.5;
+        }
+
+        .result-placeholder p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            max-width: 250px;
+            line-height: 1.6;
+        }
+
+        /* Active Results Content */
+        .result-content {
+            display: none;
+            width: 100%;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Gauge Progress */
+        .gauge-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .gauge-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 12;
+        }
+
+        .gauge-fill {
+            fill: none;
+            stroke: var(--accent-color);
+            stroke-width: 12;
+            stroke-dasharray: 439.8;
+            /* 2 * pi * r = 2 * 3.14159 * 70 */
+            stroke-dashoffset: 439.8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.16, 1, 0.3, 1), stroke var(--transition-speed) ease;
+        }
+
+        .gauge-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .gauge-percent {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .gauge-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* Text Details */
+        .weather-status {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .weather-message {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 2rem;
+            padding: 0 1rem;
+        }
+
+        /* Bottom Metrics Details */
+        .temp-forecast-box {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.25rem;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .metric-label svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--text-secondary);
+            fill: none;
+        }
+
+        .metric-value {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .metric-value.temp-up {
+            color: #ef4444;
+        }
+
+        .metric-value.temp-down {
+            color: #3b82f6;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 3rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        footer a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px dashed var(--text-secondary);
+            padding-bottom: 1px;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        footer a:hover {
+            color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+    </style>
+</head>
+
+<body class="theme-sunny">
+
+    <!-- Ambient Glow Background Blobs -->
+    <div class="glow-blob blob-1"></div>
+    <div class="glow-blob blob-2"></div>
+
+    <div class="app-container">
+
+        <!-- Input Form Section -->
+        <div class="glass-card">
+            <div class="header">
+                <h1>SkyPulse</h1>
+                <p>Advanced seasonal weather forecasting for monsoon climates. Enter today's metrics to predict
+                    tomorrow's atmosphere.</p>
+            </div>
+
+            <form id="weatherForm">
+                <div class="form-grid">
+
+                    <!-- Min Temp -->
+                    <div class="input-group">
+                        <label for="minTemp">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Min Temp
+                        </label>
+                        <div class="input-wrapper numeric-input">
+                            <input type="number" id="minTemp" name="minTemp" step="0.1" placeholder="e.g. 24.5"
+                                required>
+                            <span class="unit">°C</span>
+                        </div>
+                    </div>
+
+                    <!-- Max Temp -->
+                    <div class="input-group">
+                        <label for="maxTemp">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Max Temp
+                        </label>
+                        <div class="input-wrapper numeric-input">
+                            <input type="number" id="maxTemp" name="maxTemp" step="0.1" placeholder="e.g. 32.0"
+                                required>
+                            <span class="unit">°C</span>
+                        </div>
+                    </div>
+
+                    <!-- Humidity -->
+                    <div class="input-group">
+                        <label for="humidity">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            Humidity
+                        </label>
+                        <div class="input-wrapper numeric-input">
+                            <input type="number" id="humidity" name="humidity" min="0" max="100" placeholder="e.g. 85"
+                                required>
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+
+                    <!-- Pressure -->
+                    <div class="input-group">
+                        <label for="pressure">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke-width="2" />
+                                <path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Pressure
+                        </label>
+                        <div class="input-wrapper numeric-input">
+                            <input type="number" id="pressure" name="pressure" placeholder="e.g. 1004" required>
+                            <span class="unit">hPa</span>
+                        </div>
+                    </div>
+
+                    <!-- Month -->
+                    <div class="input-group full-width">
+                        <label for="month">
+                            <svg viewBox="0 0 24 24">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" stroke-width="2" />
+                                <line x1="8" y1="2" x2="8" y2="6" stroke-width="2" />
+                                <line x1="3" y1="10" x2="21" y2="10" stroke-width="2" />
+                            </svg>
+                            Month of Year
+                        </label>
+                        <div class="input-wrapper">
+                            <select id="month" name="month" required>
+                                <option value="" disabled selected>Select a month...</option>
+                                <option value="1">January (Winter)</option>
+                                <option value="2">February (Winter)</option>
+                                <option value="3">March (Pre-Monsoon / Summer)</option>
+                                <option value="4">April (Pre-Monsoon / Summer)</option>
+                                <option value="5">May (Pre-Monsoon / Summer)</option>
+                                <option value="6">June (Monsoon Season)</option>
+                                <option value="7">July (Monsoon Season)</option>
+                                <option value="8">August (Monsoon Season)</option>
+                                <option value="9">September (Post-Monsoon)</option>
+                                <option value="10">October (Post-Monsoon)</option>
+                                <option value="11">November (Autumn)</option>
+                                <option value="12">December (Winter)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Predict Submit Button -->
+                    <button type="submit" class="btn-predict">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                            <line x1="12" y1="22.08" x2="12" y2="12" />
+                        </svg>
+                        Generate Forecast
+                    </button>
+
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Visualization Section -->
+        <div class="glass-card results-card" id="resultsCard">
+
+            <!-- Placeholder -->
+            <div class="result-placeholder" id="placeholder">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 8.58" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path d="M12 13v8M9 16l3-3 3 3" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p>Fill in the observations on the left and tap 'Generate Forecast' to see predictions powered by
+                    machine learning.</p>
+            </div>
+
+            <!-- Result Content -->
+            <div class="result-content" id="resultContent">
+
+                <!-- Circular Gauge -->
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 160 160">
+                        <circle class="gauge-bg" cx="80" cy="80" r="70"></circle>
+                        <circle class="gauge-fill" id="gaugeFill" cx="80" cy="80" r="70"></circle>
+                    </svg>
+                    <div class="gauge-value">
+                        <span class="gauge-percent" id="probText">0%</span>
+                        <span class="gauge-label">Rain Prob</span>
+                    </div>
+                </div>
+
+                <!-- Prediction Text Summary -->
+                <h2 class="weather-status" id="weatherStatus">Sunny Sky</h2>
+                <p class="weather-message" id="weatherMsg">Conditions indicate clear skies. Enjoy your day!</p>
+
+                <!-- Temp and Details Box -->
+                <div class="temp-forecast-box">
+                    <div class="metric-row">
+                        <span class="metric-label">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" stroke-width="2" />
+                            </svg>
+                            Predicted Max Temp (Tomorrow)
+                        </span>
+                        <span class="metric-value" id="predMaxTemp">--.- °C</span>
+                    </div>
+
+                    <div class="metric-row">
+                        <span class="metric-label">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            Atmospheric State
+                        </span>
+                        <span class="metric-value" id="atmosState">Moderate</span>
+                    </div>
+
+                    <div class="metric-row">
+                        <span class="metric-label">
+                            <svg viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"
+                                    stroke-width="2" />
+                            </svg>
+                            Solar Risk (UV)
+                        </span>
+                        <span class="metric-value" id="solarRisk">Low</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <footer>
+        Weather forecasting model trained on synthetic climatological data.
+        <a href="weather_data.csv" download>Download CSV</a>
+    </footer>
+
+    <!-- Frontend Forecast Logic (Trained ML Coefficients) -->
+    <script>
+        // --- MACHINE LEARNING MODEL WEIGHTS (Phases 2 & 4) ---
+        // Features: [MinTemp, MaxTemp, Humidity, Pressure, Month, DayOfYear]
+
+        // 1. Adjusted Logistic Regression Coefficients (for raw unscaled inputs)
+        const ADJ_COEFS = [
+            -0.012627639919910812, // MinTemp
+            0.015313853418335337, // MaxTemp
+            0.09099199723605496,  // Humidity
+            -0.14044263904032242,  // Pressure
+            -0.10655968726902129,  // Month
+            0.0027466740627542564 // DayOfYear
+        ];
+        const ADJ_INTERCEPT = 133.7482151747843;
+
+        // 2. Adjusted Linear Regression Coefficients for Max Temp (for raw unscaled inputs)
+        const REG_COEFS = [
+            0.3680545788578475,   // MinTemp
+            0.5993427142200047,   // MaxTemp
+            -0.05710727759639946,  // Humidity
+            0.015343905581954595, // Pressure
+            -0.02366698403163041,  // Month
+            -0.001384515250899405  // DayOfYear
+        ];
+        const REG_INTERCEPT = -6.920541402953084;
+
+        // Calculate Day of Year from Month (middle of month approximation)
+        function getDayOfYear(month) {
+            const daysInMonths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            let dayCount = 0;
+            for (let i = 0; i < month - 1; i++) {
+                dayCount += daysInMonths[i];
+            }
+            // Add 15 days for mid-month representation
+            return dayCount + 15;
+        }
+
+        // Apply Sigmoid Function
+        function sigmoid(z) {
+            return 1 / (1 + Math.exp(-z));
+        }
+
+        // Form Submission Handler
+        document.getElementById('weatherForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Retrieve inputs
+            const minTemp = parseFloat(document.getElementById('minTemp').value);
+            const maxTemp = parseFloat(document.getElementById('maxTemp').value);
+            const humidity = parseFloat(document.getElementById('humidity').value);
+            const pressure = parseFloat(document.getElementById('pressure').value);
+            const month = parseInt(document.getElementById('month').value);
+            const dayOfYear = getDayOfYear(month);
+
+            // Validation: MaxTemp must be greater than MinTemp
+            if (maxTemp <= minTemp) {
+                alert("Max Temperature must be higher than Min Temperature.");
+                return;
+            }
+
+            // 1. Classification: Predict Rain Probability
+            // z = adjusted_intercept + sum(coef_i * x_i)
+            let z = ADJ_INTERCEPT;
+            z += ADJ_COEFS[0] * minTemp;
+            z += ADJ_COEFS[1] * maxTemp;
+            z += ADJ_COEFS[2] * humidity;
+            z += ADJ_COEFS[3] * pressure;
+            z += ADJ_COEFS[4] * month;
+            z += ADJ_COEFS[5] * dayOfYear;
+
+            const rainProb = sigmoid(z);
+            const rainPercent = Math.round(rainProb * 100);
+
+            // 2. Regression: Predict Tomorrow's MaxTemp
+            let predictedMaxTemp = REG_INTERCEPT;
+            predictedMaxTemp += REG_COEFS[0] * minTemp;
+            predictedMaxTemp += REG_COEFS[1] * maxTemp;
+            predictedMaxTemp += REG_COEFS[2] * humidity;
+            predictedMaxTemp += REG_COEFS[3] * pressure;
+            predictedMaxTemp += REG_COEFS[4] * month;
+            predictedMaxTemp += REG_COEFS[5] * dayOfYear;
+
+            // Visual Updates
+            updateUI(rainPercent, predictedMaxTemp, humidity, pressure, month);
+        });
+
+        // Update UI Dashboard
+        function updateUI(probability, nextMaxTemp, humidity, pressure, month) {
+            const body = document.body;
+            const placeholder = document.getElementById('placeholder');
+            const resultContent = document.getElementById('resultContent');
+
+            // Transition view
+            placeholder.style.display = 'none';
+            resultContent.style.display = 'block';
+
+            // 1. Update Gauge Circle Animation
+            const gaugeFill = document.getElementById('gaugeFill');
+            const circumference = 439.8; // 2 * Math.PI * 70
+            const offset = circumference - (probability / 100) * circumference;
+            gaugeFill.style.strokeDashoffset = offset;
+
+            // Update percentage text
+            document.getElementById('probText').innerText = probability + '%';
+
+            // 2. Update Weather Messages and Themes dynamically
+            const weatherStatus = document.getElementById('weatherStatus');
+            const weatherMsg = document.getElementById('weatherMsg');
+            const solarRisk = document.getElementById('solarRisk');
+            const atmosState = document.getElementById('atmosState');
+
+            // Change body theme class based on rain probability and temperature
+            body.className = ''; // clear current class
+
+            if (probability >= 70) {
+                // High probability of rain (Stormy / Heavy Monsoon)
+                body.classList.add('theme-stormy');
+                weatherStatus.innerText = "Heavy Rain Warning";
+                weatherStatus.style.color = "var(--stormy-color)";
+                weatherMsg.innerText = `${probability}% Chance of Rain - Pack an Umbrella! Expect localized flooding and monsoonal downpours.`;
+                solarRisk.innerText = "Very Low (Overcast)";
+            } else if (probability >= 30) {
+                // Moderate probability (Showers / Rainy)
+                body.classList.add('theme-rainy');
+                weatherStatus.innerText = "Scattered Showers";
+                weatherStatus.style.color = "var(--rainy-color)";
+                weatherMsg.innerText = `${probability}% Chance of Rain - Scattered showers likely tomorrow. Keeping an umbrella handy is recommended.`;
+                solarRisk.innerText = "Low (Cloudy)";
+            } else {
+                // Low probability (Sunny / Clear)
+                body.classList.add('theme-sunny');
+                weatherStatus.innerText = "Clear & Sunny";
+                weatherStatus.style.color = "var(--sunny-color)";
+                weatherMsg.innerText = `${probability}% Chance of Rain - Clear skies ahead. Perfect day to plan outdoor activities!`;
+
+                // Solar risk correlates with month and temperature
+                if (nextMaxTemp > 38 || [4, 5].includes(month)) {
+                    solarRisk.innerText = "Extreme (Heat Wave)";
+                    solarRisk.style.color = "#ef4444";
+                } else if (nextMaxTemp > 30) {
+                    solarRisk.innerText = "High";
+                    solarRisk.style.color = "#f97316";
+                } else {
+                    solarRisk.innerText = "Moderate";
+                    solarRisk.style.color = "#eab308";
+                }
+            }
+
+            // 3. Update Forecast temperature values
+            const formattedTemp = nextMaxTemp.toFixed(1);
+            document.getElementById('predMaxTemp').innerText = formattedTemp + ' °C';
+
+            // Compare predicted vs input maxTemp to show direction
+            const inputMaxTemp = parseFloat(document.getElementById('maxTemp').value);
+            const tempValElement = document.getElementById('predMaxTemp');
+
+            if (nextMaxTemp > inputMaxTemp + 0.5) {
+                tempValElement.className = "metric-value temp-up";
+                tempValElement.innerHTML = `${formattedTemp} °C ▲`;
+            } else if (nextMaxTemp < inputMaxTemp - 0.5) {
+                tempValElement.className = "metric-value temp-down";
+                tempValElement.innerHTML = `${formattedTemp} °C ▼`;
+            } else {
+                tempValElement.className = "metric-value";
+                tempValElement.innerHTML = `${formattedTemp} °C`;
+            }
+
+            // 4. Update Atmospheric State descriptions
+            if (pressure < 1000) {
+                atmosState.innerText = "Unstable / Low Pressure";
+                atmosState.style.color = "#f43f5e";
+            } else if (pressure > 1016) {
+                atmosState.innerText = "Stable / High Pressure";
+                atmosState.style.color = "#10b981";
+            } else {
+                atmosState.innerText = "Moderate / Balanced";
+                atmosState.style.color = "var(--text-primary)";
+            }
+        }
+    </script>
+</body>
+
+</html>
